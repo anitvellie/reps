@@ -106,19 +106,89 @@ Per set: `targetReps`, `actualReps`, `weight`, `weightUnit` (kg/lb), `RIR` (0–
 
 ### File Structure
 ```
-WorkoutApp/
-├── App/                         # Entry point, AppRouter, environment setup
-├── Models/                      # SwiftData model classes + Enums.swift
+Reps/
+├── App/                         # RepsApp, AppRouter, ContentView
+├── Models/                      # SwiftData model classes + Enums.swift + AppSettings
 ├── Services/                    # WorkoutSessionService, TemplateService, ExerciseLibraryService, HealthKitService
 ├── Features/
-│   ├── Library/                 # Exercise browser + create custom exercise
-│   ├── Templates/               # Template list, builder, set configuration
-│   ├── ActiveWorkout/           # Active workout screen, set rows, rest timer
-│   ├── History/                 # Workout history list + detail
-│   └── Settings/
-├── Components/                  # Reusable UI components
+│   ├── Library/                 # ExerciseLibraryView, CreateExerciseView
+│   ├── Templates/               # TemplateListView, TemplateBuilderView, ExercisePickerView
+│   ├── ActiveWorkout/           # (Phase 2)
+│   ├── History/                 # (Phase 3)
+│   └── Settings/                # SettingsView
+├── Components/                  # Reusable UI (none yet)
 └── Utilities/                   # WeightConverter, VolumeCalculator
 ```
+
+---
+
+## Established Patterns (Phases 0–1)
+
+### SwiftUI / SwiftData conventions
+- Services are `@Observable` classes, accessed in views via `@Environment(ServiceType.self)` — never `@EnvironmentObject`
+- When a binding is needed from an `@Observable` service/model, declare `@Bindable var x = x` locally inside `body` (iOS 17 pattern)
+- `@Query` is used directly in views for SwiftData fetching — no extra ViewModel wrapper needed
+- `String?` model fields can't bind to `TextField` directly — use a local `@State var text: String` initialised from the optional, with `.onChange` to write back
+- Delete pattern: `modelContext.delete(object)` then `try? modelContext.save()` — services also call save after mutations
+- Services take `ModelContext` in their `init` (obtained from `container.mainContext` at app startup) — never `ModelContainer`
+- `xcodegen generate` must be re-run after adding any new Swift files since `project.yml` uses a directory glob for sources
+
+### Navigation
+- `TemplateListView` owns its own `NavigationStack` + `@State var path: NavigationPath` so it can programmatically push `TemplateBuilderView` immediately after creating a new template
+- `ExerciseLibraryView` is wrapped in a `NavigationStack` by `ContentView`
+- `AppRouter` exists but is not yet used for navigation — it's available for cross-tab or modal flows (e.g. launching active workout from Templates tab)
+- `AppSheet.activeWorkout(WorkoutSession)` is the intended mechanism to present the active workout screen as a full-screen cover
+
+### Reusable UI patterns
+- Muscle group filter chips (horizontal `ScrollView` of capsule `Button`s, "All" chip first, tap active chip to deselect) — implemented in both `ExerciseLibraryView` and `ExercisePickerView`; if needed a third time, extract to `Components/MuscleGroupChipRail.swift`
+- `IntOptionalField` and `DoubleOptionalField` helper views (local to `TemplateBuilderView`) bridge `Int?`/`Double?` model fields to `TextField` — reuse or promote to `Components/` if needed in active workout set rows
+
+### HealthKit
+- Only entitlement needed: `com.apple.developer.healthkit: true`
+- Do NOT add `com.apple.developer.healthkit.access: health-records` — that requires special Apple approval and breaks automatic provisioning
+- All HealthKit code lives exclusively in `HealthKitService.swift`
+
+---
+
+## Phase 2 Implementation Notes
+
+### Starting a workout (`WorkoutSessionService.startWorkout`)
+- Copy `ExerciseTemplate → ExerciseLog` and `SetTemplate → SetLog`, carrying over all target values (`targetReps`, `targetWeight`, `rir`, `setType`, etc.)
+- Set `template.lastUsedAt = Date()` on the source template
+- Insert the `WorkoutSession` (and all child logs) into `modelContext` and save immediately — session must be persisted before the user completes any sets
+- Set `activeSession` on the service so the UI can react
+
+### Rest timer
+- Store `restTimerEndsAt: Date` on `WorkoutSessionService` (already stubbed)
+- Drive countdown UI with `TimelineView(.animation)` — compute `remaining = restTimerEndsAt.timeIntervalSinceNow` on each tick
+- Fire completion via `Task { try? await Task.sleep(until: restTimerEndsAt, clock: .continuous) }` — cancel the task on `skipRestTimer()`
+- Schedule a `UNUserNotificationCenter` local notification at `restTimerEndsAt` as background fallback; cancel it when the timer is skipped or app is foregrounded
+- Rest duration to use per set: `exerciseTemplate.restDuration ?? session's template's restDuration ?? 90`
+
+### Set completion flow
+1. Mark `setLog.isCompleted = true`, `setLog.completedAt = Date()`
+2. Save to SwiftData immediately (crash-safety)
+3. Recalculate `session.totalVolume` via `VolumeCalculator.totalVolume(for:)`
+4. Start the rest timer with the appropriate duration
+5. Haptic feedback: `UIImpactFeedbackGenerator(style: .medium).impactOccurred()`
+
+### Active workout UI behaviour per modality
+- `cardio` / `durationOnly`: hide weight field, show duration field instead
+- `bodyweight`: weight field is optional (show but not required)
+- `bodyweightLoaded`: weight field represents added load
+- All others: weight + reps fields both shown
+
+### RIR vs RPE
+- `SetLog` has both `rir: Int?` and `rpe: Double?` fields — populate only the one matching `appSettings.useRPE`
+- In the active workout UI, show either "RIR" or "RPE" label based on `appSettings.useRPE`
+
+### Saving eagerly
+- Call `try? modelContext.save()` after every set completion — not just at workout end
+- This ensures an OS kill mid-workout loses at most the current in-progress set
+
+### Presenting the active workout
+- Use `AppRouter.present(.activeWorkout(session))` to show as `.fullScreenCover` from the root
+- The active workout screen should not be part of any tab's `NavigationStack`
 
 ---
 
