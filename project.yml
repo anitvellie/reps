@@ -1,0 +1,40 @@
+name: Reps
+options:
+  bundleIdPrefix: com.reps
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16"
+  createIntermediateGroups: true
+
+targets:
+  Reps:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Reps
+    info:
+      path: Reps/Info.plist
+      properties:
+        CFBundleDisplayName: Reps
+        CFBundleShortVersionString: "1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen:
+          UIColorName: ""
+        NSHealthShareUsageDescription: "Reps reads workout data to show your fitness history."
+        NSHealthUpdateUsageDescription: "Reps saves your workouts to Apple Health."
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    entitlements:
+      path: Reps/Reps.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access:
+          - health-records
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.reps.app
+        SWIFT_VERSION: "5.9"
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_FILE: Reps/Info.plist
+        ENABLE_PREVIEWS: YES
