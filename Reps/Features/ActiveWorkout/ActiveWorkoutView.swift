@@ -8,14 +8,18 @@ struct ActiveWorkoutView: View {
 
     var session: WorkoutSession
 
+    @State private var path: [WorkoutSession] = []
     @State private var showingAbandonAlert = false
     @State private var showingExercisePicker = false
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             exerciseList
                 .navigationTitle(session.name)
                 .navigationBarTitleDisplayMode(.inline)
+                .navigationDestination(for: WorkoutSession.self) { completed in
+                    WorkoutSummaryView(session: completed)
+                }
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
                         Button("Abandon") {
@@ -29,7 +33,7 @@ struct ActiveWorkoutView: View {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button("Finish") {
                             sessionService.finishWorkout(session)
-                            appRouter.dismissSheet()
+                            path.append(session)
                         }
                         .fontWeight(.semibold)
                     }
@@ -76,6 +80,8 @@ private struct ActiveExerciseSection: View {
     var exerciseLog: ExerciseLog
     var session: WorkoutSession
 
+    @State private var showingHistory = false
+
     var body: some View {
         Section {
             setRows
@@ -96,9 +102,20 @@ private struct ActiveExerciseSection: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button {
+                    showingHistory = true
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                        .foregroundStyle(Color.accentColor)
+                }
                 completedBadge
             }
             .textCase(nil)
+        }
+        .sheet(isPresented: $showingHistory) {
+            NavigationStack {
+                ExerciseHistoryView(exercise: exerciseLog.exercise)
+            }
         }
     }
 

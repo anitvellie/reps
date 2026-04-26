@@ -20,6 +20,13 @@ struct ContentView: View {
             }
 
             NavigationStack {
+                WorkoutHistoryView()
+            }
+            .tabItem {
+                Label("History", systemImage: "clock")
+            }
+
+            NavigationStack {
                 SettingsView()
             }
             .tabItem {

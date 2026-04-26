@@ -54,6 +54,9 @@ struct ExerciseLibraryView: View {
         }
         .navigationTitle("Library")
         .searchable(text: $searchText, prompt: "Search exercises")
+        .navigationDestination(for: Exercise.self) { exercise in
+            ExerciseHistoryView(exercise: exercise)
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -70,11 +73,13 @@ struct ExerciseLibraryView: View {
 
     @ViewBuilder
     private func exerciseRow(_ exercise: Exercise) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(exercise.name)
-            Text("\(exercise.muscleGroup.displayName) · \(exercise.modality.displayName)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        NavigationLink(value: exercise) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(exercise.name)
+                Text("\(exercise.muscleGroup.displayName) · \(exercise.modality.displayName)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
             if exercise.isCustom {
