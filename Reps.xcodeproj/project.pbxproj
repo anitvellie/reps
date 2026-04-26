@@ -53,7 +53,7 @@
 		74BF6CFAF879017D6E9EDA6A /* ExerciseLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryService.swift; sourceTree = "<group>"; };
 		820DA1DEB327416829C49BC8 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		89F73E9CB8B46A571B9DEA48 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		8AD60C6BDD44A63047D0E969 /* Reps.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Reps.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8AD60C6BDD44A63047D0E969 /* Reps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Reps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		900238C77FDAF74403607B32 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		99CC8306504554D5F28C4237 /* WeightConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightConverter.swift; sourceTree = "<group>"; };
 		9A8E91B1887D8B753148BA4D /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -235,11 +235,6 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-					0416157AB6A2DD4CDDAF81C0 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 6E01C31FF6A49288626E1C68 /* Build configuration list for PBXProject "Reps" */;
 			compatibilityVersion = "Xcode 10.0";
@@ -302,7 +297,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Reps/Reps.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9F7853B85Y;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Reps/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -310,7 +305,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.reps.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.repsworkout.app;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -442,7 +437,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Reps/Reps.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9F7853B85Y;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Reps/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -450,7 +445,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.reps.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.repsworkout.app;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";

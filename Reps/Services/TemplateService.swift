@@ -47,9 +47,9 @@ class TemplateService {
     }
 
     @discardableResult
-    func addSet(to exerciseTemplate: ExerciseTemplate, type: SetType) -> SetTemplate {
+    func addSet(to exerciseTemplate: ExerciseTemplate, type: SetType, restDuration: TimeInterval = 90) -> SetTemplate {
         let order = exerciseTemplate.sets.count
-        let setTemplate = SetTemplate(order: order, setType: type)
+        let setTemplate = SetTemplate(order: order, setType: type, restDuration: restDuration)
         exerciseTemplate.sets.append(setTemplate)
         modelContext.insert(setTemplate)
         try? modelContext.save()

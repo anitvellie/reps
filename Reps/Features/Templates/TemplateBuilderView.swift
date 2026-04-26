@@ -36,27 +36,8 @@ struct TemplateBuilderView: View {
     private var headerSection: some View {
         Section {
             TextField("Workout name", text: $template.name)
-
-            restDurationRow
-
             TextField("Notes", text: $notesText, axis: .vertical)
                 .lineLimit(2...5)
-        }
-    }
-
-    private var restDurationRow: some View {
-        HStack {
-            Text("Rest")
-            Spacer()
-            Text(formatDuration(template.restDuration))
-                .foregroundStyle(.secondary)
-            Stepper(
-                "",
-                value: $template.restDuration,
-                in: 15...600,
-                step: 15
-            )
-            .labelsHidden()
         }
     }
 
@@ -76,15 +57,18 @@ struct TemplateBuilderView: View {
 
     @ViewBuilder
     private func exerciseSection(_ exerciseTemplate: ExerciseTemplate) -> some View {
+        let sortedSets = exerciseTemplate.sets.sorted(by: { $0.order < $1.order })
         Section {
-            ForEach(exerciseTemplate.sets.sorted(by: { $0.order < $1.order })) { setTemplate in
+            ForEach(sortedSets) { setTemplate in
                 setRow(setTemplate, in: exerciseTemplate)
-            }
-            .onDelete { indexSet in
-                let sorted = exerciseTemplate.sets.sorted(by: { $0.order < $1.order })
-                for index in indexSet {
-                    templateService.removeSet(sorted[index], from: exerciseTemplate)
-                }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            templateService.removeSet(setTemplate, from: exerciseTemplate)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                TemplateRestTimerRow(setTemplate: setTemplate, defaultDuration: appSettings.defaultRestDuration)
             }
 
             addSetButton(for: exerciseTemplate)
@@ -122,32 +106,26 @@ struct TemplateBuilderView: View {
                 .foregroundStyle(.secondary)
                 .font(.subheadline)
 
-            Text(shortLabel(for: set.setType))
-                .font(.caption.bold())
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(Color.accentColor.opacity(0.15))
-                .foregroundStyle(Color.accentColor)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+            Menu {
+                ForEach(SetType.allCases, id: \.self) { type in
+                    Button(type.displayName) {
+                        set.setType = type
+                    }
+                }
+            } label: {
+                Text(shortLabel(for: set.setType))
+                    .font(.caption.bold())
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.accentColor.opacity(0.15))
+                    .foregroundStyle(Color.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
 
             repsField(for: set)
-
             weightField(for: set)
-
             intensityField(for: set)
-
-            restField(for: set)
         }
-    }
-
-    private func restField(for set: SetTemplate) -> some View {
-        IntOptionalField(
-            placeholder: "Rest",
-            value: Binding(
-                get: { set.restDuration.map { Int($0) } },
-                set: { set.restDuration = $0.map { TimeInterval($0) } }
-            )
-        )
     }
 
     private func repsField(for set: SetTemplate) -> some View {
@@ -182,7 +160,7 @@ struct TemplateBuilderView: View {
     private func addSetButton(for exerciseTemplate: ExerciseTemplate) -> some View {
         HStack {
             Button {
-                templateService.addSet(to: exerciseTemplate, type: .working)
+                templateService.addSet(to: exerciseTemplate, type: .working, restDuration: appSettings.defaultRestDuration)
             } label: {
                 Label("Add Set", systemImage: "plus")
                     .font(.subheadline)
@@ -193,7 +171,7 @@ struct TemplateBuilderView: View {
             Menu {
                 ForEach(SetType.allCases, id: \.self) { setType in
                     Button(setType.displayName) {
-                        templateService.addSet(to: exerciseTemplate, type: setType)
+                        templateService.addSet(to: exerciseTemplate, type: setType, restDuration: appSettings.defaultRestDuration)
                     }
                 }
             } label: {
@@ -225,18 +203,54 @@ struct TemplateBuilderView: View {
         case .amrap:     return "AMRAP"
         }
     }
-
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds)
-        let minutes = total / 60
-        let secs = total % 60
-        if minutes > 0 && secs > 0 {
-            return "\(minutes)m \(secs)s"
-        } else if minutes > 0 {
-            return "\(minutes)m"
-        } else {
-            return "\(secs)s"
-        }
-    }
 }
 
+// MARK: - Template Rest Timer Row
+
+private struct TemplateRestTimerRow: View {
+    var setTemplate: SetTemplate
+    let defaultDuration: TimeInterval
+
+    @State private var showingEdit = false
+    @State private var editText = ""
+
+    private var duration: TimeInterval {
+        setTemplate.restDuration ?? defaultDuration
+    }
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.accentColor.opacity(0.12))
+                .frame(height: 28)
+            Text(formatTime(duration))
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(Color.accentColor)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            editText = "\(Int(duration))"
+            showingEdit = true
+        }
+        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .alert("Rest Timer", isPresented: $showingEdit) {
+            TextField("Seconds", text: $editText)
+                .keyboardType(.numberPad)
+            Button("Set") {
+                if let secs = Double(editText), secs > 0 {
+                    setTemplate.restDuration = secs
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Enter rest duration in seconds")
+        }
+    }
+
+    private func formatTime(_ seconds: TimeInterval) -> String {
+        let total = Int(max(0, ceil(seconds)))
+        return String(format: "%d:%02d", total / 60, total % 60)
+    }
+}

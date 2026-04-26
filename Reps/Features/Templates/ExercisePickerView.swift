@@ -9,6 +9,7 @@ struct ExercisePickerView: View {
 
     @State private var searchText = ""
     @State private var selectedMuscleGroup: MuscleGroup? = nil
+    @State private var showingCreateExercise = false
 
     private var filtered: [Exercise] {
         exercises.filter { exercise in
@@ -45,6 +46,12 @@ struct ExercisePickerView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button("New Exercise") { showingCreateExercise = true }
+                }
+            }
+            .sheet(isPresented: $showingCreateExercise) {
+                CreateExerciseView()
             }
         }
     }

@@ -176,7 +176,7 @@ Reps/
 ### Active workout UI
 - `@Bindable var setLog: SetLog` declared as a stored property on `ActiveSetRow` (not in `body`) — works for SwiftData `@Model` classes passed as view parameters
 - Set row fields are modality-driven: `cardio`/`durationOnly` show a duration field; all others show weight + reps; `bodyweightLoaded` weight placeholder shows "+kg"/"+lb"
-- Completed sets rendered at 50% opacity; complete button is a no-op if `setLog.isCompleted` is already true
+- Completed sets rendered at 50% opacity; complete button toggles completion (tap again to unmark)
 
 ### Template list — starting workouts
 - Per-template "Start": visible `play.circle.fill` button on the right of each row (plain `Button`, not swipe action)
@@ -191,11 +191,14 @@ Reps/
 
 ### Inline rest timer
 - `InlineRestTimerRow` lives in `RestTimerOverlay.swift` (repurposed; the full-screen overlay is gone)
-- **Static state** (between sets, timer not active): thin horizontal lines + M:SS text in `Color.accentColor`; shown between every adjacent pair of sets via `index < count - 1 || isActiveTimer` condition
-- **Active state** (after set completion): pink `-10` | `Color.accentColor` countdown (`TimelineView(.animation)`) | pink `+10`; row goes edge-to-edge with `.listRowInsets(EdgeInsets())`
-- Tap the countdown → `.alert` with `TextField(.numberPad)` to enter new seconds; commits via `sessionService.setRestTimerEnd(to:)`
-- `lastCompletedSetID: UUID?` on `WorkoutSessionService` (observable) identifies which separator is active — set in `completeSet`, cleared in `cancelRestTimer` and the timer-fire handler
-- `adjustRestTimer(by delta: TimeInterval)` and `setRestTimerEnd(to date: Date)` both cancel the existing task/notification and restart via `startRestTimerTask(endsAt:)` private helper (extracted to avoid duplication across three call sites)
+- **Static state** (between sets, timer not active): pill-shaped bar (24pt height, `Color.accentColor` at 12% opacity) with M:SS text centred; shown between every adjacent pair of sets via `index < count - 1 || isActiveTimer` condition
+- **Active state** (after set completion): pink `-10` (60pt wide) | progress bar fill | pink `+10` (60pt wide); row goes edge-to-edge with `.listRowInsets(EdgeInsets())`; height is 44pt
+- Progress bar: `ZStack` with a gray background rectangle and a blue foreground rectangle scaled via `.scaleEffect(x: CGFloat(progress), anchor: .leading)` — shrinks from full to empty as time counts down; `progress = min(1.0, remaining / totalDuration)`
+- Countdown text is a white overlay centred on the progress bar (`TimelineView(.animation)` for per-frame updates)
+- Tap the progress bar → `.alert` with `TextField(.numberPad)` to enter new seconds; commits via `sessionService.setRestTimerEnd(to:)`
+- `lastCompletedSetID: UUID?` on `WorkoutSessionService` (observable) identifies which separator is active — **must be set AFTER calling `startRestTimer`**, because `startRestTimer` calls `cancelRestTimer` internally which would otherwise clear it immediately
+- `restTimerTotalDuration: TimeInterval` on `WorkoutSessionService` is set when the timer starts; passed to `InlineRestTimerRow` as `totalDuration` for progress calculation; NOT updated on `adjustRestTimer` (progress cap handles over-100% gracefully)
+- `adjustRestTimer(by delta: TimeInterval)` and `setRestTimerEnd(to date: Date)` both cancel the existing task/notification and restart via `startRestTimerTask(endsAt:)` private helper (extracted to avoid duplication across three call sites); `setRestTimerEnd` also resets `restTimerTotalDuration`
 - Separator after the last set only renders when that set is the active timer
 
 ---
@@ -214,7 +217,7 @@ Reps/
 - Fire completion via `Task { try? await Task.sleep(until: restTimerEndsAt, clock: .continuous) }` — cancel the task on `skipRestTimer()`
 - Schedule a `UNUserNotificationCenter` local notification at `restTimerEndsAt` as background fallback; cancel it when the timer is skipped or app is foregrounded
 - Rest duration resolution chain (evaluated at workout-start, stored on `SetLog`): `setTemplate.restDuration ?? exerciseTemplate.restDuration ?? template.restDuration`
-- At set completion: use `setLog.restDuration ?? exerciseLog.restDuration ?? 90`
+- At set completion: use `setLog.restDuration ?? exerciseLog.restDuration ?? defaultRestDuration` (reads `AppSettings.defaultRestDuration` from `UserDefaults`)
 - Between exercises: no special handling — the timer started by the last set of exercise N keeps running while the user navigates to exercise N+1
 
 ### Set completion flow
@@ -270,6 +273,50 @@ Reps/
 ### History deletion
 - Swipe-to-delete on `WorkoutHistoryView` rows only: `modelContext.delete(session)` + `try? modelContext.save()`
 - No delete affordance in `WorkoutDetailView` — deletion is a list-level action
+
+---
+
+## Established Patterns (Post-Phase 3 Polish)
+
+### Default rest duration
+- `AppSettings.defaultRestDuration: TimeInterval` — persisted in `UserDefaults` under key `"defaultRestDuration"`, defaults to 90s
+- Exposed in Settings under a "Rest Timer" section with a ±15s stepper
+- `WorkoutSessionService` reads this value directly from `UserDefaults` via a private `defaultRestDuration` computed property (avoids injecting `AppSettings` into the service)
+- Used as the fallback when adding ad-hoc sets/exercises mid-workout and when `TemplateService.addSet` creates a new `SetTemplate`
+
+### Template builder rest timers
+- Workout-wide rest duration row removed from the template header — per-set timer separators replace it
+- `TemplateService.addSet(to:type:restDuration:)` now accepts a `restDuration: TimeInterval` parameter (default 90); callers pass `appSettings.defaultRestDuration`
+- `SetTemplate.restDuration` is always set explicitly when adding via the builder; nil is still a valid SwiftData state for old records (falls back to `exerciseLog.restDuration ?? defaultRestDuration` at workout-start)
+- `TemplateRestTimerRow` (private struct in `TemplateBuilderView.swift`) renders a tappable pill between every set row (including after the last set): accent-coloured bar, time centred, tap opens `.alert` with seconds input
+- Because `ForEach` now produces two rows per iteration (set row + timer row), `.onDelete` cannot be used — replaced with `.swipeActions(edge: .trailing, allowsFullSwipe: true)` on each set row
+- `var setTemplate: SetTemplate` (no property wrapper) is sufficient for observation in `TemplateRestTimerRow` — SwiftUI auto-tracks `@Observable` (`@Model`) property access in `body`
+
+### AppSettings access in services
+- Services do **not** hold a reference to `AppSettings` — read `UserDefaults` directly for any setting needed at service call-time (e.g., `defaultRestDuration`)
+- Views still access `AppSettings` via `@Environment(AppSettings.self)` and pass concrete values as parameters when calling service methods that need them
+
+---
+
+## Established Patterns (Active Workout & Template Polish)
+
+### Exercise picker — create new exercise inline
+- `ExercisePickerView` has a "New Exercise" trailing toolbar button that presents `CreateExerciseView` as a nested sheet
+- No changes to `CreateExerciseView` needed — it saves to SwiftData and dismisses; the picker's `@Query` auto-refreshes so the new exercise appears in the list immediately for selection
+
+### Toggle set completion
+- `WorkoutSessionService.uncompleteSet(_:in:)` reverses a completed set: clears `isCompleted`/`completedAt`, recalculates `totalVolume`, and cancels the rest timer **only if** `lastCompletedSetID == setLog.id` — safe to call while a later set's timer is still running
+- `completeButton` in `ActiveSetRow` is a true toggle: calls `uncompleteSet` when tapped on a completed set, `completeSet` otherwise
+- `recalculateVolume(for:)` is a standalone helper on `WorkoutSessionService` (used by both `uncompleteSet` and the onChange handlers below)
+
+### Editing completed sets
+- No `.disabled` on any set row field — completed sets stay editable; 50% opacity provides the visual distinction
+- `ActiveSetRow.body` has `.onChange(of: setLog.weight)` and `.onChange(of: setLog.actualReps)` that call `sessionService.recalculateVolume(for: session)` when the set is already completed, keeping `session.totalVolume` accurate after post-hoc edits
+
+### Editable set type badges (Menu pattern)
+- Both `TemplateBuilderView.setRow()` and `ActiveSetRow.setTypeBadge` wrap the badge `Text` in a `Menu` with `ForEach(SetType.allCases, id: \.self)`
+- Template builder: mutate `set.setType = type` directly on the `@Model` (SwiftData tracks the change; no explicit save needed in the view)
+- Active workout: call `sessionService.updateSetType(for: setLog, to: type)` which sets the property and calls `modelContext.save()` for eager persistence
 
 ---
 

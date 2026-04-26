@@ -12,6 +12,7 @@ class WorkoutSessionService {
     var restTimerEndsAt: Date?
     var isRestTimerRunning: Bool = false
     var lastCompletedSetID: UUID?
+    var restTimerTotalDuration: TimeInterval = 0
 
     @ObservationIgnored private var restTimerTask: Task<Void, Never>?
 
@@ -80,8 +81,31 @@ class WorkoutSessionService {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
         let exerciseLog = session.exerciseLogs.first { $0.setLogs.contains { $0.id == setLog.id } }
+        let duration = setLog.restDuration ?? exerciseLog?.restDuration ?? defaultRestDuration
+        startRestTimer(duration: duration)
+        // Set AFTER startRestTimer so cancelRestTimer inside startRestTimer doesn't clear it
         lastCompletedSetID = setLog.id
-        startRestTimer(duration: setLog.restDuration ?? exerciseLog?.restDuration ?? 90)
+    }
+
+    func uncompleteSet(_ setLog: SetLog, in session: WorkoutSession) {
+        setLog.isCompleted = false
+        setLog.completedAt = nil
+        session.totalVolume = VolumeCalculator.totalVolume(for: session.exerciseLogs.flatMap { $0.setLogs })
+        try? modelContext.save()
+        if lastCompletedSetID == setLog.id {
+            cancelRestTimer()
+            lastCompletedSetID = nil
+        }
+    }
+
+    func recalculateVolume(for session: WorkoutSession) {
+        session.totalVolume = VolumeCalculator.totalVolume(for: session.exerciseLogs.flatMap { $0.setLogs })
+        try? modelContext.save()
+    }
+
+    func updateSetType(for setLog: SetLog, to type: SetType) {
+        setLog.setType = type
+        try? modelContext.save()
     }
 
     func addSet(to exerciseLog: ExerciseLog, type: SetType = .working, in session: WorkoutSession) {
@@ -91,7 +115,8 @@ class WorkoutSessionService {
             order: nextOrder,
             setType: type,
             weight: lastSet?.weight,
-            weightUnit: lastSet?.weightUnit ?? .kg
+            weightUnit: lastSet?.weightUnit ?? .kg,
+            restDuration: lastSet?.restDuration ?? defaultRestDuration
         )
         modelContext.insert(setLog)
         exerciseLog.setLogs.append(setLog)
@@ -100,7 +125,7 @@ class WorkoutSessionService {
 
     func addExercise(_ exercise: Exercise, to session: WorkoutSession) {
         let nextOrder = (session.exerciseLogs.map(\.order).max() ?? -1) + 1
-        let exerciseLog = ExerciseLog(order: nextOrder, exercise: exercise, restDuration: 90)
+        let exerciseLog = ExerciseLog(order: nextOrder, exercise: exercise, restDuration: defaultRestDuration)
         modelContext.insert(exerciseLog)
         session.exerciseLogs.append(exerciseLog)
         try? modelContext.save()
@@ -150,6 +175,7 @@ class WorkoutSessionService {
         restTimerTask = nil
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
         restTimerEndsAt = safeDate
+        restTimerTotalDuration = safeDate.timeIntervalSinceNow
         scheduleRestNotification(at: safeDate)
         startRestTimerTask(endsAt: safeDate)
     }
@@ -160,6 +186,7 @@ class WorkoutSessionService {
         guard duration > 0 else { return }
         cancelRestTimer()
 
+        restTimerTotalDuration = duration
         let endsAt = Date().addingTimeInterval(duration)
         restTimerEndsAt = endsAt
         isRestTimerRunning = true
@@ -210,5 +237,10 @@ class WorkoutSessionService {
         Task {
             try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
         }
+    }
+
+    private var defaultRestDuration: TimeInterval {
+        let stored = UserDefaults.standard.double(forKey: "defaultRestDuration")
+        return stored > 0 ? stored : 90
     }
 }

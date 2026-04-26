@@ -135,7 +135,8 @@ private struct ActiveExerciseSection: View {
                 InlineRestTimerRow(
                     isActive: isActiveTimer,
                     endsAt: sessionService.restTimerEndsAt,
-                    restDuration: setLog.restDuration ?? exerciseLog.restDuration
+                    restDuration: setLog.restDuration ?? exerciseLog.restDuration,
+                    totalDuration: sessionService.restTimerTotalDuration
                 )
             }
         }
@@ -182,16 +183,30 @@ private struct ActiveSetRow: View {
             completeButton
         }
         .opacity(setLog.isCompleted ? 0.5 : 1.0)
+        .onChange(of: setLog.weight) {
+            if setLog.isCompleted { sessionService.recalculateVolume(for: session) }
+        }
+        .onChange(of: setLog.actualReps) {
+            if setLog.isCompleted { sessionService.recalculateVolume(for: session) }
+        }
     }
 
     private var setTypeBadge: some View {
-        Text(shortLabel(for: setLog.setType))
-            .font(.caption.bold())
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Color.accentColor.opacity(0.15))
-            .foregroundStyle(Color.accentColor)
-            .clipShape(RoundedRectangle(cornerRadius: 4))
+        Menu {
+            ForEach(SetType.allCases, id: \.self) { type in
+                Button(type.displayName) {
+                    sessionService.updateSetType(for: setLog, to: type)
+                }
+            }
+        } label: {
+            Text(shortLabel(for: setLog.setType))
+                .font(.caption.bold())
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Color.accentColor.opacity(0.15))
+                .foregroundStyle(Color.accentColor)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+        }
     }
 
     private var weightField: some View {
@@ -199,7 +214,6 @@ private struct ActiveSetRow: View {
             placeholder: modality == .bodyweightLoaded ? "+\(appSettings.weightUnit.rawValue)" : appSettings.weightUnit.rawValue,
             value: Binding(get: { setLog.weight }, set: { setLog.weight = $0 })
         )
-        .disabled(setLog.isCompleted)
     }
 
     private var repsField: some View {
@@ -207,7 +221,6 @@ private struct ActiveSetRow: View {
             placeholder: "Reps",
             value: Binding(get: { setLog.actualReps }, set: { setLog.actualReps = $0 })
         )
-        .disabled(setLog.isCompleted)
     }
 
     private var durationField: some View {
@@ -215,7 +228,6 @@ private struct ActiveSetRow: View {
             placeholder: "Secs",
             value: Binding(get: { setLog.duration }, set: { setLog.duration = $0 })
         )
-        .disabled(setLog.isCompleted)
     }
 
     @ViewBuilder
@@ -225,20 +237,21 @@ private struct ActiveSetRow: View {
                 placeholder: "RPE",
                 value: Binding(get: { setLog.rpe }, set: { setLog.rpe = $0 })
             )
-            .disabled(setLog.isCompleted)
         } else {
             IntOptionalField(
                 placeholder: "RIR",
                 value: Binding(get: { setLog.rir }, set: { setLog.rir = $0 })
             )
-            .disabled(setLog.isCompleted)
         }
     }
 
     private var completeButton: some View {
         Button {
-            guard !setLog.isCompleted else { return }
-            sessionService.completeSet(setLog, in: session)
+            if setLog.isCompleted {
+                sessionService.uncompleteSet(setLog, in: session)
+            } else {
+                sessionService.completeSet(setLog, in: session)
+            }
         } label: {
             Image(systemName: setLog.isCompleted ? "checkmark.circle.fill" : "circle")
                 .foregroundStyle(setLog.isCompleted ? .green : .secondary)

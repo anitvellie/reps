@@ -4,6 +4,7 @@ struct InlineRestTimerRow: View {
     let isActive: Bool
     let endsAt: Date?
     let restDuration: TimeInterval
+    let totalDuration: TimeInterval
 
     @Environment(WorkoutSessionService.self) private var sessionService
     @State private var showingTimerEdit = false
@@ -17,53 +18,62 @@ struct InlineRestTimerRow: View {
                 .listRowBackground(Color.clear)
         } else {
             staticSeparator
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
         }
     }
 
     private func activeTimerRow(endsAt: Date) -> some View {
-        HStack(spacing: 0) {
-            Button {
-                sessionService.adjustRestTimer(by: -10)
-            } label: {
-                Text("-10")
-                    .font(.headline.bold())
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.pink)
-                    .foregroundStyle(.white)
-            }
-            .buttonStyle(.plain)
+        TimelineView(.animation) { ctx in
+            let remaining = max(0, endsAt.timeIntervalSince(ctx.date))
+            let progress = totalDuration > 0 ? min(1.0, remaining / totalDuration) : 0.0
 
-            TimelineView(.animation) { ctx in
-                let remaining = max(0, endsAt.timeIntervalSince(ctx.date))
-                Text(formatTime(remaining))
-                    .font(.headline.monospacedDigit())
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.accentColor)
-                    .foregroundStyle(.white)
-                    .contentTransition(.numericText())
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                timerEditText = "\(Int(max(0, endsAt.timeIntervalSinceNow)))"
-                showingTimerEdit = true
-            }
+            HStack(spacing: 0) {
+                Button {
+                    sessionService.adjustRestTimer(by: -10)
+                } label: {
+                    Text("-10")
+                        .font(.headline.bold())
+                        .foregroundStyle(.white)
+                        .frame(width: 60)
+                        .frame(maxHeight: .infinity)
+                        .background(Color.pink)
+                }
+                .buttonStyle(.plain)
 
-            Button {
-                sessionService.adjustRestTimer(by: 10)
-            } label: {
-                Text("+10")
-                    .font(.headline.bold())
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(Color.pink)
-                    .foregroundStyle(.white)
+                ZStack {
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.2))
+
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .scaleEffect(x: CGFloat(progress), anchor: .leading)
+
+                    Text(formatTime(remaining))
+                        .font(.headline.monospacedDigit())
+                        .foregroundStyle(.white)
+                        .contentTransition(.numericText())
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    timerEditText = "\(Int(max(0, endsAt.timeIntervalSinceNow)))"
+                    showingTimerEdit = true
+                }
+
+                Button {
+                    sessionService.adjustRestTimer(by: 10)
+                } label: {
+                    Text("+10")
+                        .font(.headline.bold())
+                        .foregroundStyle(.white)
+                        .frame(width: 60)
+                        .frame(maxHeight: .infinity)
+                        .background(Color.pink)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+            .frame(height: 44)
         }
         .alert("Set Timer", isPresented: $showingTimerEdit) {
             TextField("Seconds", text: $timerEditText)
@@ -80,19 +90,15 @@ struct InlineRestTimerRow: View {
     }
 
     private var staticSeparator: some View {
-        HStack {
-            Rectangle()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(height: 1)
+        ZStack {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color.accentColor.opacity(0.12))
+                .frame(height: 24)
             Text(formatTime(restDuration))
-                .font(.caption)
+                .font(.caption.monospacedDigit())
                 .foregroundStyle(Color.accentColor)
-                .padding(.horizontal, 8)
-            Rectangle()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(height: 1)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 
     private func formatTime(_ seconds: TimeInterval) -> String {
