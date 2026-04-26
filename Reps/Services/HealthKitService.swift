@@ -6,31 +6,66 @@ class HealthKitService {
     var isAuthorized: Bool = false
 
     private let healthStore = HKHealthStore()
+    @ObservationIgnored private var workoutBuilder: HKWorkoutBuilder?
 
     func requestAuthorization() async throws {
-        // TODO: Phase 2 — request HealthKit read/write authorization
         guard HKHealthStore.isHealthDataAvailable() else {
             throw HealthKitError.notAvailable
         }
 
-        let typesToShare: Set<HKSampleType> = [
-            HKObjectType.workoutType()
-        ]
-
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.workoutType()
-        ]
+        let typesToShare: Set<HKSampleType> = [HKObjectType.workoutType()]
+        let typesToRead: Set<HKObjectType> = [HKObjectType.workoutType()]
 
         try await healthStore.requestAuthorization(toShare: typesToShare, read: typesToRead)
         isAuthorized = true
     }
 
     func startWorkout(date: Date) async throws {
-        // TODO: Phase 2 — create and start an HKWorkoutSession / HKWorkoutBuilder
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+
+        if !isAuthorized {
+            try? await requestAuthorization()
+        }
+
+        let config = HKWorkoutConfiguration()
+        config.activityType = .traditionalStrengthTraining
+
+        let builder = HKWorkoutBuilder(healthStore: healthStore, configuration: config, device: .local())
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            builder.beginCollection(withStart: date) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+        workoutBuilder = builder
     }
 
     func endWorkout(date: Date) async throws {
-        // TODO: Phase 2 — finish the HKWorkoutBuilder and save the workout
+        guard let builder = workoutBuilder else { return }
+        defer { workoutBuilder = nil }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            builder.endCollection(withEnd: date) { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            builder.finishWorkout { _, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume()
+                }
+            }
+        }
     }
 }
 

@@ -44,17 +44,20 @@ class ExerciseLog {
     var id: UUID
     var order: Int
     var exercise: Exercise
+    var restDuration: TimeInterval
     @Relationship(deleteRule: .cascade) var setLogs: [SetLog]
 
     init(
         id: UUID = UUID(),
         order: Int,
         exercise: Exercise,
+        restDuration: TimeInterval = 90,
         setLogs: [SetLog] = []
     ) {
         self.id = id
         self.order = order
         self.exercise = exercise
+        self.restDuration = restDuration
         self.setLogs = setLogs
     }
 }
@@ -75,6 +78,7 @@ class SetLog {
     var isCompleted: Bool
     var completedAt: Date?
     var notes: String?
+    var restDuration: TimeInterval?
 
     init(
         id: UUID = UUID(),
@@ -90,7 +94,8 @@ class SetLog {
         distance: Double? = nil,
         isCompleted: Bool = false,
         completedAt: Date? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        restDuration: TimeInterval? = nil
     ) {
         self.id = id
         self.order = order
@@ -106,5 +111,6 @@ class SetLog {
         self.isCompleted = isCompleted
         self.completedAt = completedAt
         self.notes = notes
+        self.restDuration = restDuration
     }
 }

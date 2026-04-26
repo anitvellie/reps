@@ -67,6 +67,7 @@ class SetTemplate {
     var targetDistance: Double?
     var rir: Int?
     var notes: String?
+    var restDuration: TimeInterval?
 
     init(
         id: UUID = UUID(),
@@ -77,7 +78,8 @@ class SetTemplate {
         targetDuration: TimeInterval? = nil,
         targetDistance: Double? = nil,
         rir: Int? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        restDuration: TimeInterval? = nil
     ) {
         self.id = id
         self.order = order
@@ -88,5 +90,6 @@ class SetTemplate {
         self.targetDistance = targetDistance
         self.rir = rir
         self.notes = notes
+        self.restDuration = restDuration
     }
 }

@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0837DD9FE86B93DE22FC986A /* RepsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 139C9662D78E951B54E33A7E /* RepsApp.swift */; };
 		36B3BB50EE5EBBA36C0AD7A7 /* WorkoutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 325C91BFF9FA30DFB772F403 /* WorkoutSession.swift */; };
+		37CE46A8971090BFDB2907F6 /* RestTimerOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 039CF222BACC85ABD7ADE3F4 /* RestTimerOverlay.swift */; };
 		43E91CFFADB5645BAB434703 /* ExerciseLibraryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74BF6CFAF879017D6E9EDA6A /* ExerciseLibraryService.swift */; };
 		4CE59D702FA6F2E4D5C0FC45 /* TemplateListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F835D63CFCC82337B7C295 /* TemplateListView.swift */; };
 		50045AC4EA7EE6956F613F62 /* TemplateBuilderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0121D97217D8E33F693805E0 /* TemplateBuilderView.swift */; };
@@ -16,8 +17,10 @@
 		65FB1C7702EA97F27D29B9E4 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2695EEFFCE3210F482CF6AE8 /* WorkoutTemplate.swift */; };
 		743F8B88256613AFFF17AE7B /* CreateExerciseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F52E93862750D1118939A81C /* CreateExerciseView.swift */; };
 		8F1A565F8378B5F4EE1082D6 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E91B1887D8B753148BA4D /* AppSettings.swift */; };
+		91F685BF6BBB17CD1BC1F157 /* ActiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50FF43A190857142B27323A5 /* ActiveWorkoutView.swift */; };
 		9337785308C0A646D0BE357C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C9441A83F7965EA8303133F /* ContentView.swift */; };
 		990C2B391559B2EF42B50A01 /* WorkoutSessionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57983595BC63844AB24422AB /* WorkoutSessionService.swift */; };
+		AA14E5909BF80E69F6D3A727 /* OptionalFields.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC673760568D9794376A683 /* OptionalFields.swift */; };
 		B35F3950EEF7F2D68972C451 /* VolumeCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 679C6122A0B5F12E930559C7 /* VolumeCalculator.swift */; };
 		C314D0CC1B0F84F57C01C113 /* AppRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB3F996944E3CA5FB0A9598 /* AppRouter.swift */; };
 		C7204A8BEF4F32403E59D636 /* ExerciseLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D00F77254435A97A8B27F5C0 /* ExerciseLibraryView.swift */; };
@@ -31,9 +34,11 @@
 
 /* Begin PBXFileReference section */
 		0121D97217D8E33F693805E0 /* TemplateBuilderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateBuilderView.swift; sourceTree = "<group>"; };
+		039CF222BACC85ABD7ADE3F4 /* RestTimerOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RestTimerOverlay.swift; sourceTree = "<group>"; };
 		139C9662D78E951B54E33A7E /* RepsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepsApp.swift; sourceTree = "<group>"; };
 		2695EEFFCE3210F482CF6AE8 /* WorkoutTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplate.swift; sourceTree = "<group>"; };
 		325C91BFF9FA30DFB772F403 /* WorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSession.swift; sourceTree = "<group>"; };
+		50FF43A190857142B27323A5 /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutView.swift; sourceTree = "<group>"; };
 		57983595BC63844AB24422AB /* WorkoutSessionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSessionService.swift; sourceTree = "<group>"; };
 		5E8AA4D1FE8E26B80DF2846C /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
 		65BA93586EDD884AF41E2C19 /* Exercise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exercise.swift; sourceTree = "<group>"; };
@@ -42,10 +47,11 @@
 		74BF6CFAF879017D6E9EDA6A /* ExerciseLibraryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLibraryService.swift; sourceTree = "<group>"; };
 		820DA1DEB327416829C49BC8 /* Enums.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Enums.swift; sourceTree = "<group>"; };
 		89F73E9CB8B46A571B9DEA48 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		8AD60C6BDD44A63047D0E969 /* Reps.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Reps.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8AD60C6BDD44A63047D0E969 /* Reps.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Reps.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		900238C77FDAF74403607B32 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		99CC8306504554D5F28C4237 /* WeightConverter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeightConverter.swift; sourceTree = "<group>"; };
 		9A8E91B1887D8B753148BA4D /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		ACC673760568D9794376A683 /* OptionalFields.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OptionalFields.swift; sourceTree = "<group>"; };
 		B1F835D63CFCC82337B7C295 /* TemplateListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateListView.swift; sourceTree = "<group>"; };
 		BEB3F996944E3CA5FB0A9598 /* AppRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppRouter.swift; sourceTree = "<group>"; };
 		CD3F5EEFFE4D007B55AEC149 /* Reps.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Reps.entitlements; sourceTree = "<group>"; };
@@ -65,6 +71,14 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		120D96E44E88B68D25403F6C /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				ACC673760568D9794376A683 /* OptionalFields.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		222AA8450FE8B65CA1EE092E /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -79,6 +93,7 @@
 		311E0BC2EF60F75E5CF3F870 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				9F396D314F32695FC84D1F0E /* ActiveWorkout */,
 				3C02BFFFEF67C32B67B3B6CA /* Library */,
 				677629085F82F6A196F311D6 /* Settings */,
 				A7F899E5237CD8F5B1E33931 /* Templates */,
@@ -141,6 +156,15 @@
 			);
 			sourceTree = "<group>";
 		};
+		9F396D314F32695FC84D1F0E /* ActiveWorkout */ = {
+			isa = PBXGroup;
+			children = (
+				50FF43A190857142B27323A5 /* ActiveWorkoutView.swift */,
+				039CF222BACC85ABD7ADE3F4 /* RestTimerOverlay.swift */,
+			);
+			path = ActiveWorkout;
+			sourceTree = "<group>";
+		};
 		A7F899E5237CD8F5B1E33931 /* Templates */ = {
 			isa = PBXGroup;
 			children = (
@@ -157,6 +181,7 @@
 				89F73E9CB8B46A571B9DEA48 /* Info.plist */,
 				CD3F5EEFFE4D007B55AEC149 /* Reps.entitlements */,
 				574AFA8697AAFF7D05D126D1 /* App */,
+				120D96E44E88B68D25403F6C /* Components */,
 				311E0BC2EF60F75E5CF3F870 /* Features */,
 				5D2AA826BBC44B991346427B /* Models */,
 				222AA8450FE8B65CA1EE092E /* Services */,
@@ -190,11 +215,6 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1600;
-				TargetAttributes = {
-					0416157AB6A2DD4CDDAF81C0 = {
-						DevelopmentTeam = "";
-					};
-				};
 			};
 			buildConfigurationList = 6E01C31FF6A49288626E1C68 /* Build configuration list for PBXProject "Reps" */;
 			compatibilityVersion = "Xcode 10.0";
@@ -218,6 +238,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				91F685BF6BBB17CD1BC1F157 /* ActiveWorkoutView.swift in Sources */,
 				C314D0CC1B0F84F57C01C113 /* AppRouter.swift in Sources */,
 				8F1A565F8378B5F4EE1082D6 /* AppSettings.swift in Sources */,
 				9337785308C0A646D0BE357C /* ContentView.swift in Sources */,
@@ -228,7 +249,9 @@
 				C7204A8BEF4F32403E59D636 /* ExerciseLibraryView.swift in Sources */,
 				E1666685EC66F8160F926147 /* ExercisePickerView.swift in Sources */,
 				D8338D84090FA4DC72EDD1F7 /* HealthKitService.swift in Sources */,
+				AA14E5909BF80E69F6D3A727 /* OptionalFields.swift in Sources */,
 				0837DD9FE86B93DE22FC986A /* RepsApp.swift in Sources */,
+				37CE46A8971090BFDB2907F6 /* RestTimerOverlay.swift in Sources */,
 				5A96E14DA5E9184A70DA6554 /* SettingsView.swift in Sources */,
 				50045AC4EA7EE6956F613F62 /* TemplateBuilderView.swift in Sources */,
 				4CE59D702FA6F2E4D5C0FC45 /* TemplateListView.swift in Sources */,
@@ -250,7 +273,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Reps/Reps.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9F7853B85Y;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Reps/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -258,7 +281,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.reps.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.repsworkout.app;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -390,7 +413,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Reps/Reps.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9F7853B85Y;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Reps/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -398,7 +421,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.reps.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.repsworkout.app;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";

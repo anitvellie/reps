@@ -135,7 +135,19 @@ struct TemplateBuilderView: View {
             weightField(for: set)
 
             intensityField(for: set)
+
+            restField(for: set)
         }
+    }
+
+    private func restField(for set: SetTemplate) -> some View {
+        IntOptionalField(
+            placeholder: "Rest",
+            value: Binding(
+                get: { set.restDuration.map { Int($0) } },
+                set: { set.restDuration = $0.map { TimeInterval($0) } }
+            )
+        )
     }
 
     private func repsField(for set: SetTemplate) -> some View {
@@ -228,48 +240,3 @@ struct TemplateBuilderView: View {
     }
 }
 
-private struct IntOptionalField: View {
-    let placeholder: String
-    @Binding var value: Int?
-
-    @State private var text: String
-
-    init(placeholder: String, value: Binding<Int?>) {
-        self.placeholder = placeholder
-        _value = value
-        _text = State(initialValue: value.wrappedValue.map { String($0) } ?? "")
-    }
-
-    var body: some View {
-        TextField(placeholder, text: $text)
-            .keyboardType(.numberPad)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .onChange(of: text) { _, newValue in
-                value = Int(newValue)
-            }
-    }
-}
-
-private struct DoubleOptionalField: View {
-    let placeholder: String
-    @Binding var value: Double?
-
-    @State private var text: String
-
-    init(placeholder: String, value: Binding<Double?>) {
-        self.placeholder = placeholder
-        _value = value
-        _text = State(initialValue: value.wrappedValue.map { String($0) } ?? "")
-    }
-
-    var body: some View {
-        TextField(placeholder, text: $text)
-            .keyboardType(.decimalPad)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: .infinity)
-            .onChange(of: text) { _, newValue in
-                value = Double(newValue)
-            }
-    }
-}

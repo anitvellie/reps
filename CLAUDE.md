@@ -27,14 +27,14 @@ Native iOS workout tracking app built with SwiftUI + SwiftData.
 - `exercise`, `order`, `restDuration?` (overrides template default), `sets: [SetTemplate]`, `supersetGroupID?`
 
 ### SetTemplate
-- `order`, `setType`, `targetReps?`, `targetWeight?`, `targetDuration?`, `targetDistance?`, `rir?`, `notes?`
+- `order`, `setType`, `targetReps?`, `targetWeight?`, `targetDuration?`, `targetDistance?`, `rir?`, `notes?`, `restDuration?`
 
 ### WorkoutSession
 - `template?`, `name`, `startedAt`, `endedAt?`, `status` (inProgress / completed / abandoned)
 - `totalVolume`, `totalDuration`, `healthKitWorkoutID?`, `exerciseLogs: [ExerciseLog]`, `notes?`
 
 ### ExerciseLog / SetLog
-- SetLog fields: `setType`, `targetReps?`, `actualReps?`, `weight?`, `weightUnit`, `rir?`, `rpe?`, `duration?`, `distance?`, `isCompleted`, `completedAt?`, `notes?`
+- SetLog fields: `setType`, `targetReps?`, `actualReps?`, `weight?`, `weightUnit`, `rir?`, `rpe?`, `duration?`, `distance?`, `isCompleted`, `completedAt?`, `notes?`, `restDuration?`
 
 ---
 
@@ -70,7 +70,7 @@ Per set: `targetReps`, `actualReps`, `weight`, `weightUnit` (kg/lb), `RIR` (0–
 - All exercises (bundled and custom) carry a `muscleGroup` attribute
 - Create / edit / delete workout templates
 - Configure sets per exercise: type, target reps/weight, rest duration
-- Default rest timer per template, overridable per exercise
+- Default rest timer per template, overridable per set (leave blank to inherit template default)
 
 ### Phase 2 — Active Workout Engine
 - Start workout from template → creates `WorkoutSession`
@@ -136,17 +136,53 @@ Reps/
 ### Navigation
 - `TemplateListView` owns its own `NavigationStack` + `@State var path: NavigationPath` so it can programmatically push `TemplateBuilderView` immediately after creating a new template
 - `ExerciseLibraryView` is wrapped in a `NavigationStack` by `ContentView`
-- `AppRouter` exists but is not yet used for navigation — it's available for cross-tab or modal flows (e.g. launching active workout from Templates tab)
-- `AppSheet.activeWorkout(WorkoutSession)` is the intended mechanism to present the active workout screen as a full-screen cover
+- `AppRouter` is now active — `AppRouter.present(.activeWorkout(session))` triggers a `.fullScreenCover` in `ContentView` via `@Bindable var router = appRouter` + `$router.activeSheet`
+- Active workout is **not** part of any tab's `NavigationStack` — it's a root-level full-screen cover
 
 ### Reusable UI patterns
 - Muscle group filter chips (horizontal `ScrollView` of capsule `Button`s, "All" chip first, tap active chip to deselect) — implemented in both `ExerciseLibraryView` and `ExercisePickerView`; if needed a third time, extract to `Components/MuscleGroupChipRail.swift`
-- `IntOptionalField` and `DoubleOptionalField` helper views (local to `TemplateBuilderView`) bridge `Int?`/`Double?` model fields to `TextField` — reuse or promote to `Components/` if needed in active workout set rows
+- `IntOptionalField` and `DoubleOptionalField` live in `Components/OptionalFields.swift` — used by both `TemplateBuilderView` and `ActiveWorkoutView`; `DoubleOptionalField` formats whole numbers without a trailing `.0`
 
 ### HealthKit
 - Only entitlement needed: `com.apple.developer.healthkit: true`
 - Do NOT add `com.apple.developer.healthkit.access: health-records` — that requires special Apple approval and breaks automatic provisioning
 - All HealthKit code lives exclusively in `HealthKitService.swift`
+
+---
+
+## Established Patterns (Phase 2)
+
+### SwiftData model additions
+- Added `restDuration: TimeInterval` to `ExerciseLog` — resolved once at workout-start from `exerciseTemplate.restDuration ?? template.restDuration`; serves as the fallback for ad-hoc sets added mid-workout
+- Added `restDuration: TimeInterval?` to `SetLog` — resolved at workout-start per set; nil means fall back to `exerciseLog.restDuration ?? 90` at completion time (allows graceful schema evolution for existing records)
+- `WorkoutSession` has no direct `template` reference (the template name is copied to `session.name`); resolved rest durations on `SetLog` are the only template data carried forward
+- `actualReps` is pre-filled from `targetReps` when creating `SetLog` from a `SetTemplate` — user can override before completing the set
+- `weightUnit` defaults to `.kg` when creating `SetLog` from a template (AppSettings is not injected into `WorkoutSessionService`); the display label in set rows follows `appSettings.weightUnit`
+
+### `@Observable` service patterns
+- Use `@ObservationIgnored` for internal properties that should not trigger SwiftUI observation: `Task<Void, Never>?` (rest timer handle), `HKWorkoutBuilder?` (HealthKit builder)
+- Services are not `@MainActor` — use `await MainActor.run { }` inside async `Task` closures when updating `@Observable` properties that drive UI (e.g., clearing `isRestTimerRunning` when the rest timer fires)
+
+### Rest timer implementation
+- `restTimerTask: Task<Void, Never>?` stored with `@ObservationIgnored`
+- Sleep pattern: `try? await Task.sleep(until: ContinuousClock.now + .seconds(duration), clock: .continuous)` — the `until:` form wakes immediately if the deadline is already past (handles app returning from background)
+- Cancellation check after sleep: `guard !Task.isCancelled else { return }` — `try?` swallows `CancellationError` so the guard is required to prevent the completion handler from firing
+- `UNTimeIntervalNotificationTrigger` interval must be `> 0` — clamp with `max(1, date.timeIntervalSinceNow)` before creating the trigger
+
+### HealthKit
+- `HKWorkoutBuilder` completion-handler methods (`beginCollection`, `endCollection`, `finishWorkout`) have no native async overloads — wrap each in `withCheckedThrowingContinuation`
+- `workoutBuilder` is stored on `HealthKitService` between `startWorkout(date:)` and `endWorkout(date:)` calls; cleared with `defer { workoutBuilder = nil }` in `endWorkout`
+
+### Active workout UI
+- `@Bindable var setLog: SetLog` declared as a stored property on `ActiveSetRow` (not in `body`) — works for SwiftData `@Model` classes passed as view parameters
+- Set row fields are modality-driven: `cardio`/`durationOnly` show a duration field; all others show weight + reps; `bodyweightLoaded` weight placeholder shows "+kg"/"+lb"
+- Completed sets rendered at 50% opacity; complete button is a no-op if `setLog.isCompleted` is already true
+- Rest timer overlay uses `.transition(.opacity)` + `.animation(.easeInOut(duration: 0.2), value: sessionService.isRestTimerRunning)` on the parent `ZStack`
+
+### Template list — starting workouts
+- Per-template "Start" action: leading swipe gesture (`.tint(.green)`), full-swipe allowed
+- Ad-hoc workout: `+` menu in toolbar with "New Template" and "Empty Workout" options; also surfaced as a button in the empty state
+- Both flows call `workoutSessionService.start…`, then `appRouter.present(.activeWorkout(session))`
 
 ---
 
@@ -163,7 +199,9 @@ Reps/
 - Drive countdown UI with `TimelineView(.animation)` — compute `remaining = restTimerEndsAt.timeIntervalSinceNow` on each tick
 - Fire completion via `Task { try? await Task.sleep(until: restTimerEndsAt, clock: .continuous) }` — cancel the task on `skipRestTimer()`
 - Schedule a `UNUserNotificationCenter` local notification at `restTimerEndsAt` as background fallback; cancel it when the timer is skipped or app is foregrounded
-- Rest duration to use per set: `exerciseTemplate.restDuration ?? session's template's restDuration ?? 90`
+- Rest duration resolution chain (evaluated at workout-start, stored on `SetLog`): `setTemplate.restDuration ?? exerciseTemplate.restDuration ?? template.restDuration`
+- At set completion: use `setLog.restDuration ?? exerciseLog.restDuration ?? 90`
+- Between exercises: no special handling — the timer started by the last set of exercise N keeps running while the user navigates to exercise N+1
 
 ### Set completion flow
 1. Mark `setLog.isCompleted = true`, `setLog.completedAt = Date()`
