@@ -11,6 +11,7 @@ class WorkoutSessionService {
     var activeSession: WorkoutSession?
     var restTimerEndsAt: Date?
     var isRestTimerRunning: Bool = false
+    var lastCompletedSetID: UUID?
 
     @ObservationIgnored private var restTimerTask: Task<Void, Never>?
 
@@ -79,6 +80,7 @@ class WorkoutSessionService {
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
 
         let exerciseLog = session.exerciseLogs.first { $0.setLogs.contains { $0.id == setLog.id } }
+        lastCompletedSetID = setLog.id
         startRestTimer(duration: setLog.restDuration ?? exerciseLog?.restDuration ?? 90)
     }
 
@@ -130,6 +132,28 @@ class WorkoutSessionService {
         cancelRestTimer()
     }
 
+    func adjustRestTimer(by delta: TimeInterval) {
+        guard isRestTimerRunning, let current = restTimerEndsAt else { return }
+        let newEndsAt = max(Date().addingTimeInterval(1), current.addingTimeInterval(delta))
+        restTimerTask?.cancel()
+        restTimerTask = nil
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
+        restTimerEndsAt = newEndsAt
+        scheduleRestNotification(at: newEndsAt)
+        startRestTimerTask(endsAt: newEndsAt)
+    }
+
+    func setRestTimerEnd(to date: Date) {
+        guard isRestTimerRunning else { return }
+        let safeDate = max(Date().addingTimeInterval(1), date)
+        restTimerTask?.cancel()
+        restTimerTask = nil
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
+        restTimerEndsAt = safeDate
+        scheduleRestNotification(at: safeDate)
+        startRestTimerTask(endsAt: safeDate)
+    }
+
     // MARK: - Rest Timer
 
     private func startRestTimer(duration: TimeInterval) {
@@ -141,14 +165,19 @@ class WorkoutSessionService {
         isRestTimerRunning = true
 
         scheduleRestNotification(at: endsAt)
+        startRestTimerTask(endsAt: endsAt)
+    }
 
+    private func startRestTimerTask(endsAt: Date) {
+        let duration = endsAt.timeIntervalSinceNow
         restTimerTask = Task {
-            let deadline = ContinuousClock.now + .seconds(duration)
+            let deadline = ContinuousClock.now + .seconds(max(0, duration))
             try? await Task.sleep(until: deadline, clock: .continuous)
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 isRestTimerRunning = false
                 restTimerEndsAt = nil
+                lastCompletedSetID = nil
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
             }
         }
@@ -159,6 +188,7 @@ class WorkoutSessionService {
         restTimerTask = nil
         isRestTimerRunning = false
         restTimerEndsAt = nil
+        lastCompletedSetID = nil
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["restTimer"])
     }
 

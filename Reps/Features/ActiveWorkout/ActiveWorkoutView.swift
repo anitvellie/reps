@@ -13,49 +13,41 @@ struct ActiveWorkoutView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                exerciseList
-
-                if sessionService.isRestTimerRunning, let endsAt = sessionService.restTimerEndsAt {
-                    RestTimerOverlay(endsAt: endsAt)
-                        .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.2), value: sessionService.isRestTimerRunning)
-            .navigationTitle(session.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Abandon") {
-                        showingAbandonAlert = true
+            exerciseList
+                .navigationTitle(session.name)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button("Abandon") {
+                            showingAbandonAlert = true
+                        }
+                        .foregroundStyle(.red)
                     }
-                    .foregroundStyle(.red)
+                    ToolbarItem(placement: .principal) {
+                        WorkoutStopwatch(startedAt: session.startedAt)
+                    }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("Finish") {
+                            sessionService.finishWorkout(session)
+                            appRouter.dismissSheet()
+                        }
+                        .fontWeight(.semibold)
+                    }
                 }
-                ToolbarItem(placement: .principal) {
-                    WorkoutStopwatch(startedAt: session.startedAt)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Finish") {
-                        sessionService.finishWorkout(session)
+                .alert("Abandon Workout?", isPresented: $showingAbandonAlert) {
+                    Button("Abandon", role: .destructive) {
+                        sessionService.abandonWorkout(session)
                         appRouter.dismissSheet()
                     }
-                    .fontWeight(.semibold)
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("Your progress will be saved but marked as abandoned.")
                 }
-            }
-            .alert("Abandon Workout?", isPresented: $showingAbandonAlert) {
-                Button("Abandon", role: .destructive) {
-                    sessionService.abandonWorkout(session)
-                    appRouter.dismissSheet()
+                .sheet(isPresented: $showingExercisePicker) {
+                    ExercisePickerView { exercise in
+                        sessionService.addExercise(exercise, to: session)
+                    }
                 }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Your progress will be saved but marked as abandoned.")
-            }
-            .sheet(isPresented: $showingExercisePicker) {
-                ExercisePickerView { exercise in
-                    sessionService.addExercise(exercise, to: session)
-                }
-            }
         }
     }
 
@@ -86,15 +78,7 @@ private struct ActiveExerciseSection: View {
 
     var body: some View {
         Section {
-            ForEach(exerciseLog.setLogs.sorted { $0.order < $1.order }) { setLog in
-                ActiveSetRow(
-                    setLog: setLog,
-                    setNumber: setLog.order + 1,
-                    modality: exerciseLog.exercise.modality,
-                    session: session
-                )
-            }
-
+            setRows
             Button {
                 sessionService.addSet(to: exerciseLog, in: session)
             } label: {
@@ -115,6 +99,28 @@ private struct ActiveExerciseSection: View {
                 completedBadge
             }
             .textCase(nil)
+        }
+    }
+
+    @ViewBuilder
+    private var setRows: some View {
+        let sortedSets = exerciseLog.setLogs.sorted { $0.order < $1.order }
+        ForEach(Array(sortedSets.enumerated()), id: \.element.id) { index, setLog in
+            ActiveSetRow(
+                setLog: setLog,
+                setNumber: setLog.order + 1,
+                modality: exerciseLog.exercise.modality,
+                session: session
+            )
+
+            let isActiveTimer = sessionService.isRestTimerRunning && sessionService.lastCompletedSetID == setLog.id
+            if index < sortedSets.count - 1 || isActiveTimer {
+                InlineRestTimerRow(
+                    isActive: isActiveTimer,
+                    endsAt: sessionService.restTimerEndsAt,
+                    restDuration: setLog.restDuration ?? exerciseLog.restDuration
+                )
+            }
         }
     }
 
