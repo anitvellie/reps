@@ -177,12 +177,26 @@ Reps/
 - `@Bindable var setLog: SetLog` declared as a stored property on `ActiveSetRow` (not in `body`) — works for SwiftData `@Model` classes passed as view parameters
 - Set row fields are modality-driven: `cardio`/`durationOnly` show a duration field; all others show weight + reps; `bodyweightLoaded` weight placeholder shows "+kg"/"+lb"
 - Completed sets rendered at 50% opacity; complete button is a no-op if `setLog.isCompleted` is already true
-- Rest timer overlay uses `.transition(.opacity)` + `.animation(.easeInOut(duration: 0.2), value: sessionService.isRestTimerRunning)` on the parent `ZStack`
 
 ### Template list — starting workouts
-- Per-template "Start" action: leading swipe gesture (`.tint(.green)`), full-swipe allowed
+- Per-template "Start": visible `play.circle.fill` button on the right of each row (plain `Button`, not swipe action)
+- Row no longer uses `NavigationLink(value:)` — a plain `.buttonStyle(.plain)` `Button` on the label area navigates by appending to the path; the play button starts the workout
 - Ad-hoc workout: `+` menu in toolbar with "New Template" and "Empty Workout" options; also surfaced as a button in the empty state
 - Both flows call `workoutSessionService.start…`, then `appRouter.present(.activeWorkout(session))`
+- Templates tab is the first tab in `ContentView`, renamed "Workouts"
+
+---
+
+## Established Patterns (Phase 2 — Post-launch polish)
+
+### Inline rest timer
+- `InlineRestTimerRow` lives in `RestTimerOverlay.swift` (repurposed; the full-screen overlay is gone)
+- **Static state** (between sets, timer not active): thin horizontal lines + M:SS text in `Color.accentColor`; shown between every adjacent pair of sets via `index < count - 1 || isActiveTimer` condition
+- **Active state** (after set completion): pink `-10` | `Color.accentColor` countdown (`TimelineView(.animation)`) | pink `+10`; row goes edge-to-edge with `.listRowInsets(EdgeInsets())`
+- Tap the countdown → `.alert` with `TextField(.numberPad)` to enter new seconds; commits via `sessionService.setRestTimerEnd(to:)`
+- `lastCompletedSetID: UUID?` on `WorkoutSessionService` (observable) identifies which separator is active — set in `completeSet`, cleared in `cancelRestTimer` and the timer-fire handler
+- `adjustRestTimer(by delta: TimeInterval)` and `setRestTimerEnd(to date: Date)` both cancel the existing task/notification and restart via `startRestTimerTask(endsAt:)` private helper (extracted to avoid duplication across three call sites)
+- Separator after the last set only renders when that set is the active timer
 
 ---
 
@@ -227,6 +241,35 @@ Reps/
 ### Presenting the active workout
 - Use `AppRouter.present(.activeWorkout(session))` to show as `.fullScreenCover` from the root
 - The active workout screen should not be part of any tab's `NavigationStack`
+
+---
+
+## Established Patterns (Phase 3)
+
+### Workout completion flow
+- `ActiveWorkoutView` owns `@State private var path: [WorkoutSession] = []` and uses `NavigationStack(path: $path)`
+- "Finish" button calls `sessionService.finishWorkout(session)` then `path.append(session)` — does **not** call `appRouter.dismissSheet()`
+- `WorkoutSummaryView` is the `.navigationDestination(for: WorkoutSession.self)` destination; its "Done" button calls `appRouter.dismissSheet()` via `@Environment(AppRouter.self)`
+- `navigationBarBackButtonHidden(true)` on `WorkoutSummaryView` prevents back-navigation into the finished workout list
+
+### History queries
+- `@Query(sort: \WorkoutSession.startedAt, order: .reverse)` fetches all sessions; `.inProgress` sessions filtered out in-memory (`allSessions.filter { $0.status != .inProgress }`) — avoids complex `#Predicate` on an enum
+- `ExerciseHistoryView` uses the same full-query pattern, then `compactMap` to pair sessions with the matching `ExerciseLog`, then `.prefix(5)`
+
+### Exercise history access points (three locations)
+- **Library tab**: `NavigationLink(value: exercise)` on each row + `.navigationDestination(for: Exercise.self)` on `ExerciseLibraryView`
+- **Active workout**: `clock.arrow.circlepath` button in `ActiveExerciseSection` header → `.sheet` presenting `NavigationStack { ExerciseHistoryView(exercise:) }`
+- **Workout detail**: same clock button pattern in `DetailExerciseSection` header
+
+### HealthKit calorie estimate
+- `workoutStartDate: Date?` stored `@ObservationIgnored` on `HealthKitService` alongside `workoutBuilder`; both cleared via `defer { workoutBuilder = nil; workoutStartDate = nil }` in `endWorkout`
+- Calorie add uses `withCheckedContinuation` (non-throwing) so errors never propagate — the continuation always resumes regardless of failure
+- Estimate formula: MET 5.0 × 70 kg × duration_hours; `HKQuantityType(.activeEnergyBurned)` added to `typesToShare` in `requestAuthorization`
+- Calorie sample is added to the builder **before** `endCollection` / `finishWorkout`
+
+### History deletion
+- Swipe-to-delete on `WorkoutHistoryView` rows only: `modelContext.delete(session)` + `try? modelContext.save()`
+- No delete affordance in `WorkoutDetailView` — deletion is a list-level action
 
 ---
 
